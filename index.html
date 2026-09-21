@@ -1,0 +1,2516 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Smart Edge AI Quality Inspection System using Raspberry Pi, YOLO11n, MQTT and cloud offloading.">
+  <title>Smart Edge AI Quality Inspection System</title>
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      background-color: #0d1829;
+      color: #10263c;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    .poster-container {
+      max-width: 1400px;
+      margin: 8px auto;
+      padding: 0 12px;
+    }
+
+    /* Header*/
+    .poster-banner {
+      background: #0f253f;
+      border: 2px solid #1d3b61;
+      border-radius: 6px;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+
+    .poster-banner h1 {
+      margin: 0;
+      font-size: clamp(24px, 2.5vw, 32px);
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .poster-banner .lede {
+      margin: 2px 0 0;
+      color: #9cb1c9;
+      font-size: 14px;
+    }
+
+    .banner-classes {
+      display: flex;
+      gap: 8px;
+    }
+
+    .class-card {
+      background: #193557;
+      border: 1px solid #2a5282;
+      color: #e0ecf8;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .class-card .class-icon {
+      width: 20px;
+      height: 20px;
+      border: 2px solid currentColor;
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .class-card:hover { background: #23466f; }
+    .class-card.present { color: #86efac; }
+    .class-card.missing { color: #fca5a5; }
+    .class-card.misaligned { color: #7dd3fc; }
+    .class-card.missing .class-icon { border-radius: 4px; }
+    .class-card.misaligned .class-icon { border-style: dashed; }
+
+    .view-mode-drawer {
+      position: fixed;
+      z-index: 30;
+      left: 0;
+      top: 118px;
+      display: flex;
+      align-items: stretch;
+      width: 232px;
+      transform: translateX(-188px);
+      transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+      filter: drop-shadow(0 10px 18px rgb(2 15 32 / 28%));
+    }
+
+    .view-mode-drawer.open { transform: translateX(0); }
+
+    .view-controls {
+      width: 188px;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+      background: linear-gradient(145deg, #0b2a45, #123e62);
+      border: 1px solid #28739b;
+      border-left: 0;
+      border-radius: 0 0 10px 0;
+    }
+
+    .drawer-title {
+      color: #bae6fd;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .drawer-toggle {
+      width: 44px;
+      min-height: 58px;
+      align-self: flex-start;
+      display: grid;
+      place-items: center;
+      border: 1px solid #38bdf8;
+      border-left: 0;
+      border-radius: 0 10px 10px 0;
+      background: linear-gradient(180deg, #0ea5e9, #0369a1);
+      color: #ffffff;
+      font: inherit;
+      font-size: 28px;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 4px 5px 14px rgb(3 105 161 / 28%);
+    }
+
+    .view-button {
+      width: 100%;
+      min-height: 34px;
+      padding: 6px 12px;
+      border: 1px solid #0b6288;
+      border-radius: 7px;
+      background: #ffffff;
+      color: #0b4462;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .view-button.active {
+      background: #0b6288;
+      color: #ffffff;
+      box-shadow: 0 4px 10px rgb(11 98 136 / 20%);
+    }
+
+    .view-button:focus-visible {
+      outline: 3px solid #f59e0b;
+      outline-offset: 3px;
+    }
+
+    .drawer-toggle:focus-visible {
+      outline: 3px solid #f59e0b;
+      outline-offset: 3px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .component-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .component-group {
+      padding: 9px;
+      border: 1px solid #bdd5e3;
+      border-radius: 7px;
+      background: #f5faff;
+    }
+
+    .component-group h3 {
+      margin: 0 0 6px;
+      color: #0b5272;
+      font-size: 14px;
+    }
+
+    .component-group ul {
+      margin: 0;
+      padding-left: 18px;
+      color: #263f52;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .class-image-dialog {
+      width: min(92vw, 560px);
+      margin: 18px auto auto;
+      padding: 0;
+      overflow: hidden;
+      border: 2px solid #38bdf8;
+      border-radius: 10px;
+      background: #ffffff;
+      color: #102a46;
+      box-shadow: 0 18px 60px rgb(2 15 32 / 45%);
+    }
+
+    .class-image-dialog::backdrop { background: rgb(2 15 32 / 72%); }
+
+    .class-dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      background: #102a46;
+      color: #ffffff;
+    }
+
+    .class-dialog-header h2 { margin: 0; font-size: 18px; }
+
+    .class-dialog-close {
+      border: 1px solid #7dd3fc;
+      border-radius: 5px;
+      background: transparent;
+      color: #ffffff;
+      padding: 5px 9px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .class-dialog-content { margin: 0; padding: 12px; }
+    .class-dialog-content img {
+      display: block;
+      width: 100%;
+      max-height: 58vh;
+      object-fit: contain;
+      background: #f8fafc;
+      border-radius: 6px;
+    }
+    .class-dialog-content figcaption {
+      margin-top: 8px;
+      font-size: 14px;
+      line-height: 1.45;
+      text-align: center;
+    }
+
+    .poster-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 0.9fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .poster-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+
+    .col-left {
+      opacity: 1;
+    }
+
+    .col-middle {
+      opacity: 1;
+    }
+
+    .col-right {
+      opacity: 1;
+    }
+
+    @keyframes fadeInBanner {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-40px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes slideInBottom {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(40px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .poster-card {
+      background: #ffffff;
+      border: 2px solid #122842;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      overflow: hidden;
+    }
+
+    .card-header {
+      width: 100%;
+      border: 0;
+      background: #102742;
+      color: #ffffff;
+      padding: 10px 14px;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      font-family: inherit;
+      text-align: left;
+    }
+
+    .card-header.flex-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-title,
+    .sub-title {
+      margin: 0;
+      color: inherit;
+      font: inherit;
+    }
+
+    .accordion-heading { margin: 0; }
+
+
+    .card-body {
+      padding: 12px 14px;
+      font-size: 14px;
+      line-height: 1.45;
+      color: #1a2b3c;
+      max-height: 1200px;
+      opacity: 1;
+      transition: max-height 0.4s cubic-bezier(0, 1, 0, 1), opacity 0.3s ease, padding 0.3s ease;
+    }
+
+    .card-body.revealing {
+      animation: revealSection 300ms ease-out both;
+    }
+
+    @keyframes revealSection {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .poster-card.collapsed .card-body {
+      max-height: 0 !important;
+      opacity: 0;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      overflow: hidden;
+    }
+
+
+    .sub-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      background: #ffffff;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .sub-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .sub-header {
+      width: 100%;
+      border: 0;
+      background: #1e3a5f;
+      color: #ffffff;
+      padding: 8px 12px;
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      font-family: inherit;
+      text-align: left;
+    }
+
+    .sub-body {
+      padding: 10px;
+      max-height: 800px;
+      opacity: 1;
+      transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.25s ease;
+    }
+
+    .sub-card.collapsed .sub-body {
+      max-height: 0 !important;
+      opacity: 0;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      overflow: hidden;
+    }
+
+
+    .toggle-card-btn, .toggle-sub-btn {
+      background: #193557;
+      border: 1px solid #2a5282;
+      color: #38bdf8;
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      padding: 0;
+      pointer-events: none;
+    }
+
+    .toggle-sub-btn {
+      width: 24px;
+      height: 24px;
+      background: #152e4d;
+    }
+
+    .poster-card:hover .toggle-card-btn,
+    .sub-card:hover .toggle-sub-btn {
+      background: #0284c7;
+      color: #ffffff;
+      border-color: #38bdf8;
+    }
+
+    .arrow-icon {
+      display: inline-block;
+      transition: transform 0.25s ease;
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    .poster-card:not(.collapsed) > .accordion-heading .arrow-icon,
+    .sub-card:not(.collapsed) > .accordion-heading .arrow-icon {
+      transform: rotate(180deg);
+    }
+
+
+    .problem-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .prob-item, .bullet-box, .metric-sub-block, .next-grid article, .references-box {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+
+    .prob-item:hover, .bullet-box:hover, .metric-sub-block:hover, .next-grid article:hover, .references-box:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+      border-color: #94a3b8;
+    }
+
+    .prob-item {
+      padding: 10px;
+      border-left: 4px solid #102742;
+    }
+
+    .bullet-box {
+      padding: 12px 12px 12px 8px;
+    }
+
+    .bullet-list {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .bullet-list li {
+      margin-bottom: 6px;
+    }
+
+    .bullet-list li:last-child {
+      margin-bottom: 0;
+    }
+
+    .solution-switcher {
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #f1f5f9;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .switch-tabs, .process-tabs {
+      display: flex;
+      background: #cbd5e1;
+      position: relative;
+    }
+
+    .mode-tab, .process-tab {
+      flex: 1;
+      padding: 8px 4px;
+      border: none;
+      background: transparent;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      color: #475569;
+      position: relative;
+      transition: color 0.3s ease, background 0.3s ease;
+    }
+
+    .mode-tab.active, .process-tab.active {
+      background: #102742;
+      color: #38bdf8;
+      box-shadow: 0 -2px 10px rgba(56, 189, 248, 0.3);
+      box-shadow: inset 0 -3px 0 #7dd3fc;
+    }
+
+    .solution-switcher:has(.active) {
+      border-color: #0284c7;
+      box-shadow: 0 0 12px rgba(2, 132, 199, 0.25);
+    }
+
+    @keyframes tabShimmer {
+      0% {
+        box-shadow: 0 0 0px rgba(56, 189, 248, 0);
+      }
+      50% {
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.6);
+      }
+      100% {
+        box-shadow: 0 -2px 10px rgba(56, 189, 248, 0.3);
+      }
+    }
+
+    .mode-copy, .process-content {
+      padding: 12px;
+      background: #f1f5f9;
+      border-radius: 0 0 6px 6px;
+      transition: opacity 0.25s ease;
+    }
+
+    .mode-copy h4, .process-content h4 {
+      margin: 0 0 6px 0;
+      font-size: 14px;
+      color: #0f172a;
+    }
+
+    .mode-copy p {
+      margin: 0;
+      color: #334155;
+    }
+
+    .architecture-frame {
+      background: #eef6fb;
+      border: 1px solid #b8ccdb;
+      border-radius: 8px;
+      padding: 6px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.75);
+      margin: 0;
+    }
+
+    .architecture-card {
+      margin-bottom: 10px;
+      border-color: #1d5375;
+      box-shadow: 0 10px 28px rgba(2, 20, 38, 0.25);
+    }
+
+    .architecture-card > .accordion-heading .card-header {
+      background: linear-gradient(100deg, #0b2a45 0%, #0c5272 100%);
+      padding: 8px 12px;
+      font-size: 15px;
+    }
+
+    .architecture-card .card-body {
+      padding: 8px 10px;
+    }
+
+    .architecture-card .section-kicker {
+      display: inline;
+      color: #7dd3fc;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+      margin-right: 8px;
+      text-transform: uppercase;
+    }
+
+    .simulation-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+      padding: 7px 9px;
+      background: #edf6fb;
+      border: 1px solid #bdd5e3;
+      border-radius: 8px;
+    }
+
+    .simulation-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .simulation-button {
+      min-height: 34px;
+      padding: 6px 12px;
+      border: 1px solid #0b6288;
+      border-radius: 7px;
+      background: #ffffff;
+      color: #0b4462;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 750;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+
+    .simulation-button.primary {
+      background: #0b6288;
+      color: #ffffff;
+      box-shadow: 0 5px 12px rgba(11, 98, 136, 0.22);
+    }
+
+    .simulation-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 7px 15px rgba(11, 98, 136, 0.2);
+    }
+
+    .simulation-button:focus-visible,
+    .class-card:focus-visible,
+    .class-dialog-close:focus-visible,
+    .demo-url:focus-visible,
+    .card-header:focus-visible,
+    .sub-header:focus-visible,
+    .mode-tab:focus-visible,
+    .process-tab:focus-visible,
+    .mode-copy:focus-visible,
+    .process-content:focus-visible,
+    .flip-container:focus-visible {
+      outline: 3px solid #f59e0b;
+      outline-offset: 3px;
+    }
+
+    [hidden] { display: none !important; }
+
+    .simulation-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.48;
+      box-shadow: none;
+    }
+
+    .threshold-summary {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #25445b;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .cpu-gauge {
+      --cpu: 34%;
+      width: 48px;
+      height: 48px;
+      flex: 0 0 48px;
+      border-radius: 50%;
+      background: conic-gradient(#c2410c var(--cpu), #cfe0ea 0);
+      display: grid;
+      place-items: center;
+      position: relative;
+      box-shadow: 0 0 0 4px rgba(255,255,255,0.8);
+    }
+
+    .cpu-gauge::after {
+      content: "";
+      position: absolute;
+      inset: 6px;
+      border-radius: 50%;
+      background: #ffffff;
+    }
+
+    .cpu-gauge strong {
+      position: relative;
+      z-index: 1;
+      color: #16364d;
+      font-size: 13px;
+    }
+
+    .threshold-summary b {
+      display: block;
+      color: #0f2f46;
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+
+    .sustain-track {
+      width: 135px;
+      height: 5px;
+      margin-top: 3px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #cbdce6;
+    }
+
+    .sustain-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: #c2410c;
+    }
+
+    .architecture-canvas {
+      aspect-ratio: 1143 / 607;
+      position: relative;
+      overflow: hidden;
+      width: min(100%, 860px);
+      margin: 0 auto;
+      border: 1px solid #9db8c9;
+      border-radius: 7px;
+      background: #ffffff;
+    }
+
+    .architecture-canvas > img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      border-radius: 6px;
+    }
+
+    .node-highlight {
+      position: absolute;
+      z-index: 2;
+      border: 3px solid #0ea5e9;
+      border-radius: 10px;
+      opacity: 0;
+      pointer-events: none;
+      box-shadow: 0 0 0 5px rgba(14,165,233,0.14), 0 0 22px rgba(14,165,233,0.65);
+      transition: opacity 0.2s ease;
+    }
+
+    .node-highlight.active {
+      opacity: 1;
+      animation: nodePulse 1.2s ease-in-out 2 alternate;
+    }
+
+    .node-highlight.success {
+      border-color: #16a34a;
+      box-shadow: 0 0 0 5px rgba(22,163,74,0.14), 0 0 22px rgba(22,163,74,0.55);
+    }
+
+    .architecture-canvas.paused .node-highlight {
+      animation-play-state: paused;
+    }
+
+    .architecture-canvas.intro-animation {
+      animation: architecturePan 2.6s ease-out both;
+      transform-origin: center;
+    }
+
+    .architecture-canvas.intro-animation.paused {
+      animation-play-state: paused;
+    }
+
+    @keyframes architecturePan {
+      0% { opacity: 0; transform: scale(0.96) translateX(-2%); }
+      55% { opacity: 1; transform: scale(1.02) translateX(2%); }
+      100% { opacity: 1; transform: scale(1) translateX(0); }
+    }
+
+    .node-camera { left: 0.2%; top: 31.5%; width: 11.3%; height: 15.1%; }
+    .node-pi { left: 20.5%; top: 32.2%; width: 13%; height: 14.2%; }
+    .node-processing { left: 32.1%; top: 34.8%; width: 13.7%; height: 9%; }
+    .node-local { left: 30.2%; top: 83%; width: 22.2%; height: 15%; }
+    .node-decision { left: 34.8%; top: 50.7%; width: 13.5%; height: 21.7%; }
+    .node-mqtt { left: 60.1%; top: 53%; width: 13%; height: 16.5%; }
+    .node-cloud { left: 77.8%; top: 32%; width: 20.4%; height: 14.3%; }
+    .node-flask { left: 60%; top: 81.4%; width: 15%; height: 16.6%; }
+    .node-results { left: 83.8%; top: 81%; width: 13.5%; height: 18.4%; }
+
+    .future-camera-label {
+      position: absolute;
+      z-index: 3;
+      pointer-events: none;
+      text-align: center;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .future-camera-label {
+      left: 0.7%;
+      width: 10.7%;
+      padding: 2px 1px;
+      background: rgb(255 255 255 / 92%);
+      color: #475569;
+      border: 1px dashed #64748b;
+      border-radius: 3px;
+      font-size: clamp(6px, 0.62vw, 9px);
+    }
+
+    .future-camera-one { top: 66.5%; }
+    .future-camera-many { top: 87.3%; }
+
+    @keyframes nodePulse {
+      from { filter: brightness(0.95); }
+      to { filter: brightness(1.18); }
+    }
+
+    .flow-token {
+      position: absolute;
+      z-index: 5;
+      left: 5.7%;
+      top: 39%;
+      min-width: 50px;
+      min-height: 27px;
+      padding: 4px 7px;
+      transform: translate(-50%, -50%) scale(0.82);
+      display: grid;
+      place-items: center;
+      border: 2px solid #0369a1;
+      border-radius: 7px;
+      background: #ffffff;
+      color: #075985;
+      box-shadow: 0 6px 18px rgba(2, 74, 112, 0.28);
+      font-size: 12px;
+      font-weight: 850;
+      line-height: 1.05;
+      text-align: center;
+      letter-spacing: 0.04em;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .flow-token.visible {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .flow-token.frame-token::before {
+      content: "▣";
+      margin-right: 4px;
+      color: #0ea5e9;
+    }
+
+    .flow-token.final-token {
+      border-color: #15803d;
+      background: #ecfdf5;
+      color: #166534;
+      box-shadow: 0 6px 18px rgba(21, 128, 61, 0.28);
+    }
+
+    .flow-token.packet-token {
+      border-color: #c2410c;
+      background: #fff7ed;
+      color: #9a3412;
+    }
+
+    .flow-token.return-token {
+      border-color: #16a34a;
+      background: #f0fdf4;
+      color: #166534;
+    }
+
+    .simulation-caption {
+      margin: 4px 2px 0;
+      color: #536b7b;
+      font-size: 12px;
+    }
+
+    .simulation-disclaimer {
+      margin: 5px 2px 0;
+      color: #334155;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .simulation-readout {
+      display: grid;
+      grid-template-columns: 1.45fr 1fr 0.8fr 1.2fr;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .readout-cell {
+      min-height: 48px;
+      padding: 6px 9px;
+      border: 1px solid #c4d5df;
+      border-radius: 7px;
+      background: #f7fbfd;
+    }
+
+    .readout-cell span {
+      display: block;
+      margin-bottom: 2px;
+      color: #617586;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .readout-cell strong {
+      color: #17364c;
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+
+    .readout-cell strong.running { color: #0369a1; }
+    .readout-cell strong.complete { color: #15803d; }
+    .readout-cell strong.warning { color: #c2410c; }
+
+
+    .flip-container {
+      perspective: 1000px;
+      cursor: pointer;
+    }
+
+    .flip-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+      transform-style: preserve-3d;
+    }
+
+    .flip-container.flipped .flip-inner {
+      transform: rotateY(180deg);
+    }
+
+    .flip-front, .flip-back {
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 6px;
+    }
+
+    .flip-back {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform: rotateY(180deg);
+      background: #091a2e;
+      color: #e0f2fe;
+      border: 1px solid #0284c7;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      line-height: 1.4;
+      text-align: center;
+      box-shadow: inset 0 0 10px rgba(2, 132, 199, 0.2);
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .metric-card {
+      height: 120px;
+      min-height: 120px;
+      transition: transform 0.25s ease;
+    }
+
+    .metric-card .flip-back {
+      box-sizing: border-box;
+      overflow: auto;
+      padding: 9px;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .metric-front {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 8px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .metric-front strong {
+      font-size: 20px;
+      color: #0284c7;
+      display: block;
+    }
+
+    .metric-front span {
+      font-size: 13px;
+      color: #475569;
+    }
+
+    /* Matrix Frame and Flip */
+    .matrix-card {
+      margin-top: 10px;
+      min-height: 0;
+      transition: transform 0.25s ease;
+    }
+
+    .matrix-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .matrix-front {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .matrix-front img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 4px;
+    }
+/*
+    .matrix-caption {
+      font-size: 13px;
+      color: #475569;
+      margin-top: 6px;
+      text-align: center;
+      font-style: italic;
+    }
+*/
+    .matrix-caption {
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: normal;
+      font-style: normal;
+      color: #536b7b;
+      margin: 4px 2px 0;
+      text-align: left;
+    }
+
+    .matrix-back {
+      font-size: 13px;
+      padding: 14px;
+      text-align: left;
+      border-left: 3px solid #38bdf8;
+    }
+
+
+    .system-metrics-group {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .metric-sub-block {
+      padding: 8px 10px;
+    }
+
+    .metric-sub-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .metric-inline-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 8px;
+    }
+
+    .metric-inline-grid div strong {
+      font-size: 14px;
+      color: #0f172a;
+      display: block;
+    }
+
+    .metric-inline-grid div span {
+      font-size: 13px;
+      color: #475569;
+    }
+
+    .next-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .next-grid article {
+      padding: 8px 10px;
+      border-left: 3px solid #0284c7;
+      font-size: 14px;
+    }
+
+    .references-box {
+      padding: 10px 10px 10px 4px;
+    }
+
+    .references-list {
+      margin: 0;
+      padding-left: 20px;
+      font-size: 13px;
+      color: #475569;
+    }
+
+    footer {
+      max-width: 1400px;
+      margin: 12px auto;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      color: #e2edf7;
+      background: #0b2138;
+      border: 1px solid #2b5375;
+      border-radius: 7px;
+      font-size: 14px;
+    }
+
+    .demo-access {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: #ffffff;
+    }
+
+    .demo-qr {
+      width: 96px;
+      height: 96px;
+      display: block;
+      object-fit: contain;
+      background: #ffffff;
+      border: 2px solid #7dd3fc;
+      border-radius: 4px;
+      color: #7dd3fc;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .demo-url {
+      display: block;
+      color: #bae6fd;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .results-caution {
+      margin: 8px 0 0;
+      padding: 7px 9px;
+      border-left: 3px solid #c2410c;
+      background: #fff7ed;
+      color: #7c2d12;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 900px) {
+      .view-mode-drawer { top: 92px; }
+      .component-grid { grid-template-columns: 1fr; }
+      .poster-grid {
+        grid-template-columns: 1fr;
+      }
+      .poster-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .banner-classes {
+        width: 100%;
+        flex-wrap: wrap;
+      }
+      .simulation-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      .simulation-readout {
+        grid-template-columns: 1fr 1fr;
+      }
+      .threshold-summary {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (min-width: 901px) and (max-height: 850px) {
+      .poster-banner {
+        padding: 7px 12px;
+      }
+      .poster-banner h1 {
+        font-size: 24px;
+      }
+      .architecture-canvas {
+        width: min(100%, 710px);
+      }
+      .architecture-card .card-body {
+        padding: 7px 10px;
+      }
+      .simulation-caption {
+        margin-top: 2px;
+      }
+    }
+
+    @media (min-width: 901px) and (max-height: 720px) {
+      .poster-banner .lede {
+        display: none;
+      }
+      .poster-banner {
+        margin-bottom: 5px;
+      }
+      .architecture-canvas {
+        width: min(100%, 600px);
+      }
+      .simulation-toolbar,
+      .simulation-readout {
+        margin-bottom: 4px;
+        margin-top: 4px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .poster-container {
+        padding: 0 9px;
+      }
+      .simulation-actions,
+      .simulation-button {
+        width: 100%;
+      }
+      .simulation-readout {
+        grid-template-columns: 1fr;
+      }
+      .flow-token {
+        min-width: 50px;
+        min-height: 28px;
+        padding: 4px 6px;
+        font-size: 12px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* header section */
+    .poster-banner {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 96px;
+      gap: 8px 16px;
+      align-items: center;
+    }
+    .banner-heading { min-width: 0; }
+    .poster-banner h1 {
+      white-space: nowrap;
+      font-size: clamp(19px, 2.2vw, 32px);
+      line-height: 1.2;
+    }
+    .poster-banner .lede {
+      display: block;
+      color: #c2d7e9;
+      line-height: 1.4;
+      margin-top: 6px;
+    }
+    .banner-demo {
+      margin: 0; justify-self: end; text-align: center;
+    }
+    .banner-demo figcaption {
+      margin-top: 4px; font-size: 13px; color: #e2edf7;
+    }
+    .banner-demo figcaption a {
+      text-decoration: none;
+      color: inherit;
+    }
+    .banner-demo figcaption a:hover {
+      text-decoration: underline;
+    }
+    .poster-banner .banner-classes {
+      grid-column: 1 / -1;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+    @media (max-width: 760px) {
+      .poster-banner h1 { white-space: normal; font-size: 24px; }
+      .poster-banner .banner-classes { justify-content: flex-start; }
+    }
+    @media (max-width: 400px) {
+      .poster-banner { gap: 10px; padding: 10px; }
+      .poster-banner h1 { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <main id="top" class="poster-container">
+    <header class="poster-banner">
+      <div class="banner-heading">
+        <h1>Smart Edge AI Quality Inspection System</h1>
+        <p class="lede">AI checks bottle labels locally and uses cloud support only when needed.</p>
+      </div>
+      <figure class="banner-demo">
+        <img class="demo-qr" src="demo-qr-youtube.png" alt="QR code linking to the project demonstration video">
+        <figcaption>
+          <a href="https://youtu.be/Koklo5KoVdY" target="_blank" rel="noopener noreferrer">
+            Project Demo</a>
+        </figcaption>
+      </figure>
+      <div class="banner-classes" aria-label="Inspection class examples">
+        <button class="class-card present" type="button" data-class-image="label-present.png" data-class-name="Label present" data-class-description="Bottle with a complete label positioned correctly at its centre."><span class="class-icon" aria-hidden="true">✓</span><span>Label present</span></button>
+        <button class="class-card missing" type="button" data-class-image="label-missing.png" data-class-name="Label missing" data-class-description="Bottle with no label in the expected label area."><span class="class-icon" aria-hidden="true">!</span><span>Label missing</span></button>
+        <button class="class-card misaligned" type="button" data-class-image="label-misaligned.png" data-class-name="Label misaligned" data-class-description="Bottle with its label visibly tilted away from the correct position."><span class="class-icon" aria-hidden="true">↗</span><span>Label misaligned</span></button>
+      </div>
+    </header>
+
+    <aside id="viewModeDrawer" class="view-mode-drawer" aria-label="Poster reading controls">
+      <div id="viewModePanel" class="view-controls" aria-hidden="true" inert>
+        <span class="drawer-title">Reading mode</span>
+        <button id="focusModeBtn" class="view-button active" type="button" aria-pressed="true">Focus mode</button>
+        <button id="readAllBtn" class="view-button" type="button" aria-pressed="false">Read all</button>
+      </div>
+      <button id="viewModeToggle" class="drawer-toggle" type="button" aria-controls="viewModePanel" aria-expanded="false">
+        <span id="viewModeChevron" aria-hidden="true">›</span>
+        <span class="sr-only">Open reading-mode controls</span>
+      </button>
+    </aside>
+
+    <dialog id="classImageDialog" class="class-image-dialog" aria-labelledby="classDialogTitle" aria-describedby="classDialogCaption">
+      <div class="class-dialog-header">
+        <h2 id="classDialogTitle">Inspection class</h2>
+        <button id="classDialogClose" class="class-dialog-close" type="button" aria-label="Close class image">Close</button>
+      </div>
+      <figure class="class-dialog-content">
+        <img id="classDialogImage" src="label-present.png" alt="Bottle with a complete label positioned correctly at its centre.">
+        <figcaption id="classDialogCaption"></figcaption>
+      </figure>
+    </dialog>
+
+    <section id="architectureSection" class="poster-card architecture-card">
+      <h2 class="accordion-heading"><button class="card-header flex-header" type="button">
+        <span class="card-title">System Architecture&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<small class="section-kicker">System Workflow</small></span>
+        <span class="toggle-card-btn" aria-hidden="true"><span class="arrow-icon">&#9660;</span></span>
+      </button></h2>
+      <div class="card-body">
+        <div class="simulation-toolbar">
+          <div class="simulation-actions" aria-label="Architecture simulation controls">
+            <button id="runInspectionBtn" class="simulation-button primary" type="button">▶ Run inspection</button>
+            <button id="highCpuBtn" class="simulation-button" type="button" disabled>Simulate high CPU load</button>
+            <button id="pauseAnimationBtn" class="simulation-button" type="button" aria-pressed="false" disabled>⏸ Pause animation</button>
+          </div>
+          <div class="threshold-summary" aria-label="Edge CPU offloading threshold">
+            <div id="cpuGauge" class="cpu-gauge" role="img" aria-label="Edge CPU utilisation 34 percent">
+              <strong id="cpuValue">34%</strong>
+            </div>
+            <div>
+              <b>Offload threshold: CPU ≥90% for 60 s</b>
+              <span id="sustainLabel">Normal edge load</span>
+              <div class="sustain-track" aria-hidden="true"><div id="sustainFill" class="sustain-fill"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <figure class="architecture-frame">
+          <div id="architectureCanvas" class="architecture-canvas">
+            <img src="system-architecture.jpg" aria-describedby="architectureCaption" alt="Flow diagram of the bottle-label inspection system. A camera sends a frame to Raspberry Pi image processing. Normal load routes the frame to local YOLO11n inference; sustained CPU load of at least 90 percent routes a Base64-encoded frame through MQTT to cloud YOLO inference. Both routes finish at the Flask dashboard and Results Log.">
+
+            <span class="future-camera-label future-camera-one" aria-hidden="true">Future scalable deployment</span>
+            <span class="future-camera-label future-camera-many" aria-hidden="true">Future scalable deployment</span>
+
+            <span id="nodeCamera" class="node-highlight node-camera" aria-hidden="true"></span>
+            <span id="nodePi" class="node-highlight node-pi" aria-hidden="true"></span>
+            <span id="nodeProcessing" class="node-highlight node-processing" aria-hidden="true"></span>
+            <span id="nodeLocal" class="node-highlight node-local" aria-hidden="true"></span>
+            <span id="nodeDecision" class="node-highlight node-decision" aria-hidden="true"></span>
+            <span id="nodeMqtt" class="node-highlight node-mqtt" aria-hidden="true"></span>
+            <span id="nodeCloud" class="node-highlight node-cloud" aria-hidden="true"></span>
+            <span id="nodeFlask" class="node-highlight node-flask" aria-hidden="true"></span>
+            <span id="nodeResults" class="node-highlight node-results" aria-hidden="true"></span>
+
+            <span id="frameToken" class="flow-token frame-token" aria-hidden="true">CAPTURED<br>FRAME</span>
+            <span id="mqttToken" class="flow-token packet-token" aria-hidden="true">BASE64<br>MQTT</span>
+            <span id="returnToken" class="flow-token return-token" aria-hidden="true">CLOUD<br>RESULT</span>
+          </div>
+          <figcaption id="architectureCaption" class="simulation-caption">Interactive simulation of local inference and CPU-triggered MQTT cloud offloading. Additional IP cameras represent a future scalable deployment and were not part of the tested prototype.</figcaption>
+          <p class="simulation-disclaimer"><strong>Note:</strong> This interactive simulation replays the system workflow using recorded project measurements; it is not a live inference session.</p>
+        </figure>
+
+        <div class="simulation-readout" aria-live="polite" aria-atomic="false">
+          <div class="readout-cell">
+            <span>System status</span>
+            <strong id="systemStatus">Ready for inspection</strong>
+          </div>
+          <div class="readout-cell">
+            <span>Predicted class</span>
+            <strong id="predictionValue">—</strong>
+          </div>
+          <div class="readout-cell">
+            <span>Mean measured MQTT RTT</span>
+            <strong id="mqttRttValue">—</strong>
+          </div>
+          <div class="readout-cell">
+            <span>Final destination</span>
+            <strong id="finalResultValue">—</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="poster-grid">
+      <!--This section belongs to Column 1-->
+      <div class="poster-col col-left">
+        <section class="poster-card collapsed">
+          <h2 class="accordion-heading"><button class="card-header flex-header" type="button">
+            <span class="card-title">1. The Problem</span>
+            <span class="toggle-card-btn" aria-hidden="true"><span class="arrow-icon">&#9660;</span></span>
+          </button></h2>
+          <div class="card-body">
+            <div class="problem-list">
+              <div class="prob-item">
+                <strong>Missing information:</strong> Missing or misaligned labels can hide product identity, traceability and safety information.
+              </div>
+              <div class="prob-item">
+                <strong>Human limitations:</strong> Repetitive manual inspection can vary with fatigue, reduced attention and inconsistent judgement.
+              </div>
+              <div class="prob-item">
+                <strong>Rigid automation:</strong> Rule-based vision can become unreliable when lighting, bottle position or background changes.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="poster-card collapsed">
+          <h2 class="accordion-heading"><button class="card-header flex-header" type="button">
+            <span class="card-title">2. How the System Works</span>
+            <span class="toggle-card-btn" aria-hidden="true"><span class="arrow-icon">&#9660;</span></span>
+          </button></h2>
+          <div class="card-body">
+            <div class="solution-switcher">
+              <div class="switch-tabs" role="tablist">
+                <button class="mode-tab active" data-mode="edge" role="tab">Edge</button>
+                <button class="mode-tab" data-mode="adaptive" role="tab">Adaptive</button>
+                <button class="mode-tab" data-mode="cloud" role="tab">Cloud</button>
+              </div>
+              <div id="modePanel" class="mode-copy" role="tabpanel" tabindex="0">
+                <h4 id="modeTitle">Local inspection by default</h4>
+                <p id="modeDesc">YOLO11n is deployed using ncnn on Raspberry Pi 4. Images are processed locally to identify present,
+                  missing or misaligned labels, reducing dependence on cloud processing.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="poster-card collapsed">
+          <h2 class="accordion-heading"><button class="card-header flex-header" type="button">
+            <span class="card-title">3. Why It Matters</span>
+            <span class="toggle-card-btn" aria-hidden="true"><span class="arrow-icon">&#9660;</span></span>
+          </button></h2>
+          <div class="card-body">
+            <div class="problem-list impact-list">
+              <div class="prob-item"><strong>Commercial:</strong> Supports more consistent automated quality inspection and reduces dependence on continuous manual checking.</div>
+              <div class="prob-item"><strong>Social &amp; Safety:</strong> Helps reduce the risk of products with missing or misaligned labels reaching customers.</div>
+              <div class="prob-item"><strong>Environmental &amp; Operational:</strong> Selective offloading avoids sending every image to the cloud and can reduce unnecessary data transmission and cloud-processing activity.</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- This section belongs to Column 2  -->
+      <div class="poster-col col-middle">
+        <section class="poster-card collapsed">
+          <h2 class="accordion-heading"><button class="card-header flex-header" type="button">
+            <span class="card-title">4. CDIO Development Process</span>
+            <span class="toggle-card-btn" aria-hidden="true"><span class="arrow-icon">&#9660;</span></span>
+          </button></h2>
+          <div class="card-body">
+            <div class="solution-switcher">
+              <div class="process-tabs" role="tablist">
+                <button class="process-tab active" data-step="conceive">1 Conceive</button>
+                <button class="process-tab" data-step="design">2 Design</button>
+                <button class="process-tab" data-step="implement">3 Implement</button>
+                <button class="process-tab" data-step="operate">4 Operate</button>
+              </div>
+              <article id="processPanel" class="process-content" role="tabpanel" tabindex="0">
+                <h4 id="processTitle">Frame the inspection challenge</h4>
+                <ul id="processList" class="bullet-list">
+                  <li>Define the industrial inspection problem and system requirements.</li>
+                  <li>Review Edge AI, MQTT and edge–cloud offloading.</li>
+                  <li>Connect technical work to quality and regulatory risk.</li>
+                </ul>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="poster-card collapsed">
+          <h2 class="accordion-heading"><button class="card-header flex-header" type="button">
+            <span class="card-title">5. System Design &amp; Components</span>
+            <span class="toggle-card-btn" aria-hidden="true"><span class="arrow-icon">&#9660;</span></span>
+          </button></h2>
+          <div class="card-body">
+            <div class="component-grid">
+              <article class="component-group">
+                <h3>Hardware</h3>
+                <ul>
+                  <li><strong>Raspberry Pi 4:</strong> performs local processing and controls adaptive offloading.</li>
+                  <li><strong>CSI camera:</strong> captures images for inspection.</li>
+                  <li><strong>Cloud service:</strong> processes images when inference is offloaded.</li>
+                </ul>
+              </article>
+              <article class="component-group">
+                <h3>AI &amp; software</h3>
+                <ul>
+                  <li><strong>YOLO11n:</strong> detects three label conditions.</li>
+                  <li><strong>ncnn:</strong> enables optimised inference on Raspberry Pi.</li>
+                  <li><strong>Flask Framework:</strong> provides the web interface for displaying inspection results and system status.</li>
+                </ul>
+              </article>
+              <article class="component-group">
+                <h3>Communication &amp; control</h3>
+                <ul>
+                  <li><strong>MQTT QoS 0:</strong> exchanges offloading requests and detection results.</li>
+                  <li><strong>Base64 JPEG/JSON:</strong> JPEG images are Base64-encoded with JSON messages for transmission.</li>
+                  <li><strong>Adaptive rule:</strong> offloads when CPU utilisation remains at or above 90% for 60 seconds and returns to local inference when CPU stays at or below 65% for 20 seconds.</li>
+                  <li><strong>TLS and authentication:</strong> protect the communication channel between edge and cloud.</li>
+                </ul>
+              </article>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- This section belongs to Column 3  -->
+      <div class="poster-col col-right">
+
+        <section class="poster-card collapsed">
+          <h2 class="accordion-heading"><button class="card-header flex-header" type="button">
+            <span class="card-title">6. Measured Results</span>
+            <span class="toggle-card-btn" aria-hidden="true"><span class="arrow-icon">&#9660;</span></span>
+          </button></h2>
+          <div class="card-body">
+            <!-- sub-heading Model Performance -->
+            <div class="sub-card">
+              <h3 class="accordion-heading"><button class="sub-header" type="button">
+                <span class="sub-title">6.1 Model Performance</span>
+                <span class="toggle-sub-btn" aria-hidden="true"><span class="arrow-icon">&#9660;</span></span>
+              </button></h3>
+              <div class="sub-body">
+                <div class="metrics-grid">
+                  <!-- Recall Flip Card -->
+                  <div class="flip-container metric-card">
+                    <div class="flip-inner">
+                      <div class="flip-front metric-front">
+                        <strong>100%</strong><span>Recall</span>
+                      </div>
+                      <div class="flip-back">
+                        The model detected every annotated instance in the 46-image controlled test set.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Precision Flip Card -->
+                  <div class="flip-container metric-card">
+                    <div class="flip-inner">
+                      <div class="flip-front metric-front">
+                        <strong>98.8%</strong><span>Precision</span>
+                      </div>
+                      <div class="flip-back">
+                        Precision measures how often predicted detections were correct across the three label classes.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- F1-score Flip Card -->
+                  <div class="flip-container metric-card">
+                    <div class="flip-inner">
+                      <div class="flip-front metric-front">
+                        <strong>99.4%</strong><span>F1-score</span>
+                      </div>
+                      <div class="flip-back">
+                        Harmonic mean balancing precision and recall across all label inspection scenarios.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- mAP50 Flip Card -->
+                  <div class="flip-container metric-card">
+                    <div class="flip-inner">
+                      <div class="flip-front metric-front">
+                        <strong>99.5%</strong><span>mAP50</span>
+                      </div>
+                      <div class="flip-back">
+                        Mean average precision at an Intersection over Union (IoU) threshold of 0.50.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- mAP50-95 Flip Card -->
+                  <div class="flip-container metric-card">
+                    <div class="flip-inner">
+                      <div class="flip-front metric-front">
+                        <strong>76.3%</strong><span>mAP50-95</span>
+                      </div>
+                      <div class="flip-back">
+                        Overall bounding-box accuracy evaluated across IoU thresholds from 0.50 to 0.95.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <p class="results-caution">Results were obtained from a controlled 46-image test set. Live performance was affected by lighting, background and bottle-position variation.</p>
+
+                <!-- Confusion Matrix Flip Card -->
+                <div class="flip-container matrix-card">
+                  <div class="flip-inner">
+                    <div class="flip-front matrix-front">
+                      <img id="confusionMatrixImg" src="confusion_matrix.png" aria-describedby="matrixCaption" alt="Confusion matrix comparing predicted and actual detections for label present, label missing and label misaligned classes.">
+                      <div id="matrixCaption" class="matrix-caption">Confusion matrix for the three label classes. <br>Click to get more info.</div>
+                    </div>
+                    <div class="flip-back matrix-back">
+                      All misaligned-label and present-label instances were correctly classified. One missing-label instance was classified as present, and two background regions were incorrectly detected as missing labels.
+                      
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Categorized Operational Performance Blocks -->
+            <div class="system-metrics-group">
+              <!-- Edge Metrics -->
+              <div class="metric-sub-block">
+                <div class="metric-sub-title">Edge Performance (Raspberry Pi)</div>
+                <div class="metric-inline-grid">
+                  <div><strong>424–545 ms</strong><span>Inference</span></div>
+                </div>
+              </div>
+
+              <!-- Cloud Metrics -->
+              <div class="metric-sub-block">
+                <div class="metric-sub-title">Cloud Performance</div>
+                <div class="metric-inline-grid">
+                  <div><strong>538.39 ms</strong><span>MQTT round-trip time</span></div>
+                  <div><strong>32/32</strong><span>Successful cloud responses</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="poster-card collapsed">
+          <h2 class="accordion-heading"><button class="card-header flex-header" type="button">
+            <span class="card-title">7. Limits &amp; Next Steps</span>
+            <span class="toggle-card-btn" aria-hidden="true"><span class="arrow-icon">&#9660;</span></span>
+          </button></h2>
+          <div class="card-body">
+            <div class="next-grid">
+              <article><span><b>01. Dataset diversity</b></span><p style="margin:2px 0 0;">Limited variation in lighting and bottle position.<br><b>Next:</b> Expand the dataset across different conditions.</p></article>
+              <article><span><b>02. Prototype environment</b></span><p style="margin:2px 0 0;">Testing was performed as a prototype rather than in a production environment.<br><b>Next:</b> Evaluate on a conveyor with automated rejection.</p></article>
+              <article><span><b>03. Offloading logic</b></span><p style="margin:2px 0 0;">The current rule is based mainly on CPU utilisation only. <br><b>Next:</b> Evaluate offloading using CPU, latency and network conditions.</p></article>
+            </div>
+          </div>
+        </section>
+
+        <section class="poster-card collapsed">
+          <h2 class="accordion-heading"><button class="card-header flex-header" type="button">
+            <span class="card-title">8. References</span>
+            <span class="toggle-card-btn" aria-hidden="true"><span class="arrow-icon">&#9660;</span></span>
+          </button></h2>
+          <div class="card-body">
+            <div class="references-box">
+              <ol class="references-list">
+                <li>UK Government (2014), <em>The Food Information Regulations 2014</em>.</li>
+                <li>Kim, T.-H., et al. (2021), "Product inspection methodology via deep learning: An Overview", <em>Sensors</em>.</li>
+                <li>OASIS (2019), <em>MQTT Version 3.1.1</em>.</li>
+                <li>Zhao, X. et al. (2020), "Improving the Accuracy-Latency Trade-off of Edge-Cloud Computation Offloading
+                  for Deep Learning Services", <em>2020 IEEE Globecom Workshops</em>.</li>
+              </ol>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!--<footer>
+    <span></span>
+    <span></span>
+
+  </footer>-->
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Class buttons open an accessible image overlay at the top of the page.
+      const classDialog = document.getElementById('classImageDialog');
+      const classDialogImage = document.getElementById('classDialogImage');
+      const classDialogTitle = document.getElementById('classDialogTitle');
+      const classDialogCaption = document.getElementById('classDialogCaption');
+      const classDialogClose = document.getElementById('classDialogClose');
+
+      document.querySelectorAll('.class-card[data-class-image]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const name = button.dataset.className;
+          const description = button.dataset.classDescription;
+          classDialogTitle.textContent = name;
+          classDialogImage.src = button.dataset.classImage;
+          classDialogImage.alt = description;
+          classDialogCaption.textContent = description;
+          classDialog.showModal();
+        });
+      });
+
+      classDialogClose.addEventListener('click', () => classDialog.close());
+      classDialog.addEventListener('click', (event) => {
+        if (event.target === classDialog) classDialog.close();
+      });
+
+      // 1. Main Accordion Toggles
+      const cardHeaders = document.querySelectorAll('.card-header');
+      const mainAccordions = [];
+      const focusModeBtn = document.getElementById('focusModeBtn');
+      const readAllBtn = document.getElementById('readAllBtn');
+      const viewModeDrawer = document.getElementById('viewModeDrawer');
+      const viewModePanel = document.getElementById('viewModePanel');
+      const viewModeToggle = document.getElementById('viewModeToggle');
+      const viewModeChevron = document.getElementById('viewModeChevron');
+      let readAllMode = false;
+      cardHeaders.forEach((header, index) => {
+        const card = header.closest('.poster-card');
+        const cardBody = card.querySelector(':scope > .card-body');
+        const setCardState = (expanded, animate = false) => {
+          card.classList.toggle('collapsed', !expanded);
+          header.setAttribute('aria-expanded', String(expanded));
+          if (cardBody) {
+            cardBody.hidden = !expanded;
+            if (expanded) {
+              cardBody.removeAttribute('inert');
+              if (animate) {
+                cardBody.classList.remove('revealing');
+                void cardBody.offsetWidth;
+                cardBody.classList.add('revealing');
+              }
+            } else {
+              cardBody.setAttribute('inert', '');
+              cardBody.classList.remove('revealing');
+            }
+          }
+        };
+        const toggleCard = () => {
+          const expanded = card.classList.contains('collapsed');
+          if (expanded && !readAllMode) {
+            mainAccordions.forEach(item => {
+              if (item.card !== card) item.setCardState(false);
+            });
+          }
+          setCardState(expanded, expanded);
+        };
+        if (cardBody) {
+          cardBody.id = cardBody.id || `sectionPanel${index + 1}`;
+          header.setAttribute('aria-controls', cardBody.id);
+        }
+        mainAccordions.push({ card, setCardState });
+        setCardState(!card.classList.contains('collapsed'));
+        header.addEventListener('click', toggleCard);
+      });
+
+      const setReadingModeButtons = () => {
+        focusModeBtn.classList.toggle('active', !readAllMode);
+        focusModeBtn.setAttribute('aria-pressed', String(!readAllMode));
+        readAllBtn.classList.toggle('active', readAllMode);
+        readAllBtn.setAttribute('aria-pressed', String(readAllMode));
+      };
+
+      const setDrawerState = (open, returnFocus = false) => {
+        viewModeDrawer.classList.toggle('open', open);
+        viewModeToggle.setAttribute('aria-expanded', String(open));
+        viewModeChevron.textContent = open ? '‹' : '›';
+        viewModeToggle.querySelector('.sr-only').textContent = open
+          ? 'Close reading-mode controls'
+          : 'Open reading-mode controls';
+        viewModePanel.setAttribute('aria-hidden', String(!open));
+        if (open) {
+          viewModePanel.removeAttribute('inert');
+          (readAllMode ? readAllBtn : focusModeBtn).focus();
+        } else {
+          viewModePanel.setAttribute('inert', '');
+          if (returnFocus) viewModeToggle.focus();
+        }
+      };
+
+      viewModeToggle.addEventListener('click', () => {
+        setDrawerState(!viewModeDrawer.classList.contains('open'));
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && viewModeDrawer.classList.contains('open')) {
+          setDrawerState(false, true);
+        }
+      });
+
+      readAllBtn.addEventListener('click', () => {
+        readAllMode = true;
+        setReadingModeButtons();
+        mainAccordions.forEach(item => item.setCardState(true, true));
+        setDrawerState(false, true);
+      });
+
+      focusModeBtn.addEventListener('click', () => {
+        readAllMode = false;
+        setReadingModeButtons();
+        mainAccordions.forEach((item, index) => item.setCardState(index === 0, false));
+        document.getElementById('architectureSection').scrollIntoView({
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+          block: 'start'
+        });
+        setDrawerState(false, true);
+      });
+
+      setReadingModeButtons();
+      setDrawerState(false);
+
+
+      const subHeaders = document.querySelectorAll('.sub-header');
+      subHeaders.forEach((header, index) => {
+        const subCard = header.closest('.sub-card');
+        const subBody = subCard.querySelector(':scope > .sub-body');
+        const setSubCardState = (expanded) => {
+          subCard.classList.toggle('collapsed', !expanded);
+          header.setAttribute('aria-expanded', String(expanded));
+          if (subBody) {
+            subBody.hidden = !expanded;
+            if (expanded) subBody.removeAttribute('inert');
+            else subBody.setAttribute('inert', '');
+          }
+        };
+        const toggleSubCard = () => {
+          const expanded = subCard.classList.contains('collapsed');
+          setSubCardState(expanded);
+        };
+        if (subBody) {
+          subBody.id = subBody.id || `subsectionPanel${index + 1}`;
+          header.setAttribute('aria-controls', subBody.id);
+        }
+        setSubCardState(!subCard.classList.contains('collapsed'));
+        header.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleSubCard();
+        });
+      });
+
+      const flipContainers = document.querySelectorAll('.flip-container');
+      flipContainers.forEach(container => {
+        const visibleLabel = container.querySelector('.metric-front span, .matrix-caption');
+        const subject = visibleLabel ? visibleLabel.textContent.trim() : 'result details';
+        const toggleFlip = () => {
+          container.classList.toggle('flipped');
+          const flipped = container.classList.contains('flipped');
+          container.setAttribute('aria-pressed', String(flipped));
+          container.setAttribute('aria-label', `${flipped ? 'Hide' : 'Show'} details for ${subject}`);
+        };
+        container.setAttribute('role', 'button');
+        container.setAttribute('tabindex', '0');
+        container.setAttribute('aria-pressed', 'false');
+        container.setAttribute('aria-label', `Show details for ${subject}`);
+        container.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleFlip();
+        });
+        container.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            toggleFlip();
+          }
+        });
+      });
+
+      const modeData = {
+        edge: {
+          title: "Local inspection by default",
+          desc: "YOLO11n is deployed using ncnn on Raspberry Pi 4. Images are processed locally to identify present,\n" +
+                  "missing or misaligned labels, reducing dependence on cloud processing."
+        },
+        adaptive: {
+          title: "Adaptive edge-cloud offloading",
+          desc: "When edge CPU utilisation remains at or above 90% for 60 seconds, a frame is encoded as Base64 and offloaded via MQTT to the cloud inference service. Local inference resumes when CPU stays at or below 65% for 20 seconds."
+        },
+        cloud: {
+          title: "Cloud inference via MQTT",
+          desc: "The MQTT broker transports the offloading request to the cloud inference service, where the image is processed. The prediction is then returned to the Raspberry Pi and displayed on the web interface."
+        }
+      };
+
+      const modeTabs = document.querySelectorAll('.mode-tab');
+      const modeTitle = document.getElementById('modeTitle');
+      const modeDesc = document.getElementById('modeDesc');
+      const modePanel = document.getElementById('modePanel');
+
+      const activateModeTab = (tab) => {
+        modeTabs.forEach(t => {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+          t.setAttribute('tabindex', '-1');
+        });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        tab.setAttribute('tabindex', '0');
+        const modeKey = tab.getAttribute('data-mode');
+        if (modeData[modeKey]) {
+          if (modeTitle) modeTitle.textContent = modeData[modeKey].title;
+          if (modeDesc) modeDesc.textContent = modeData[modeKey].desc;
+          if (modePanel) modePanel.setAttribute('aria-labelledby', tab.id);
+        }
+      };
+
+      modeTabs.forEach((tab, index) => {
+        tab.id = `modeTab${index + 1}`;
+        tab.setAttribute('aria-controls', 'modePanel');
+        tab.setAttribute('aria-selected', String(tab.classList.contains('active')));
+        tab.setAttribute('tabindex', tab.classList.contains('active') ? '0' : '-1');
+        tab.addEventListener('click', (e) => {
+          e.stopPropagation();
+          activateModeTab(tab);
+        });
+        tab.addEventListener('keydown', (event) => {
+          const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+          if (!keys.includes(event.key)) return;
+          event.preventDefault();
+          let nextIndex = index;
+          if (event.key === 'ArrowRight') nextIndex = (index + 1) % modeTabs.length;
+          if (event.key === 'ArrowLeft') nextIndex = (index - 1 + modeTabs.length) % modeTabs.length;
+          if (event.key === 'Home') nextIndex = 0;
+          if (event.key === 'End') nextIndex = modeTabs.length - 1;
+          const nextTab = modeTabs[nextIndex];
+          activateModeTab(nextTab);
+          nextTab.focus();
+        });
+      });
+
+      if (modeTabs.length) {
+        const activeModeTab = Array.from(modeTabs).find(tab => tab.classList.contains('active')) || modeTabs[0];
+        activateModeTab(activeModeTab);
+      }
+
+      const cdioData = {
+        conceive: {
+          title: "Frame the inspection challenge",
+          items: [
+            "Define the industrial inspection problem and system requirements.",
+            "Review Edge AI, MQTT and edge–cloud offloading.",
+            "Connect technical work to quality and regulatory risk."
+          ]
+        },
+        design: {
+          title: "Design the edge–cloud system",
+          items: [
+            "Design the edge-cloud architecture and three-class inspection flow.",
+            "Design MQTT communication and payload structure.",
+            "Establish CPU-based rules for switching between local and cloud inference."
+          ]
+        },
+        implement: {
+          title: "Build and integrate the prototype",
+          items: [
+            "Train YOLO11n for present, missing and misaligned label conditions.",
+            "Export the model to ncnn format and deploy it on Raspberry Pi 4.",
+            "Integrate the camera, MQTT, cloud inference, adaptive offloading and flask monitoring interface."
+          ]
+        },
+        operate: {
+          title: "Test and evaluate performance",
+          items: [
+            "Test Edge-only, Cloud-only and Adaptive modes.",
+            "Measure detection performance, inference latency and CPU utilisation.",
+            "Evaluate MQTT round-trip time, payload size and offloading behaviour."
+          ]
+        }
+      };
+
+      const processTabs = document.querySelectorAll('.process-tab');
+      const processTitle = document.getElementById('processTitle');
+      const processList = document.getElementById('processList');
+      const processPanel = document.getElementById('processPanel');
+
+      const activateProcessTab = (tab) => {
+        processTabs.forEach(t => {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+          t.setAttribute('tabindex', '-1');
+        });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        tab.setAttribute('tabindex', '0');
+        const stepKey = tab.getAttribute('data-step');
+        if (cdioData[stepKey]) {
+          if (processTitle) processTitle.textContent = cdioData[stepKey].title;
+          if (processList) {
+            processList.innerHTML = cdioData[stepKey].items.map(item => `<li>${item}</li>`).join('');
+          }
+          if (processPanel) processPanel.setAttribute('aria-labelledby', tab.id);
+        }
+      };
+
+      processTabs.forEach((tab, index) => {
+        tab.id = `processTab${index + 1}`;
+        tab.setAttribute('aria-controls', 'processPanel');
+        tab.setAttribute('aria-selected', String(tab.classList.contains('active')));
+        tab.setAttribute('tabindex', tab.classList.contains('active') ? '0' : '-1');
+        tab.addEventListener('click', (e) => {
+          e.stopPropagation();
+          activateProcessTab(tab);
+        });
+        tab.addEventListener('keydown', (event) => {
+          const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+          if (!keys.includes(event.key)) return;
+          event.preventDefault();
+          let nextIndex = index;
+          if (event.key === 'ArrowRight') nextIndex = (index + 1) % processTabs.length;
+          if (event.key === 'ArrowLeft') nextIndex = (index - 1 + processTabs.length) % processTabs.length;
+          if (event.key === 'Home') nextIndex = 0;
+          if (event.key === 'End') nextIndex = processTabs.length - 1;
+          const nextTab = processTabs[nextIndex];
+          activateProcessTab(nextTab);
+          nextTab.focus();
+        });
+      });
+
+      if (processTabs.length) {
+        const activeProcessTab = Array.from(processTabs).find(tab => tab.classList.contains('active')) || processTabs[0];
+        activateProcessTab(activeProcessTab);
+      }
+
+      const runInspectionBtn = document.getElementById('runInspectionBtn');
+      const highCpuBtn = document.getElementById('highCpuBtn');
+      const pauseAnimationBtn = document.getElementById('pauseAnimationBtn');
+      const cpuGauge = document.getElementById('cpuGauge');
+      const cpuValue = document.getElementById('cpuValue');
+      const sustainLabel = document.getElementById('sustainLabel');
+      const sustainFill = document.getElementById('sustainFill');
+      const systemStatus = document.getElementById('systemStatus');
+      const predictionValue = document.getElementById('predictionValue');
+      const mqttRttValue = document.getElementById('mqttRttValue');
+      const finalResultValue = document.getElementById('finalResultValue');
+      const architectureCanvas = document.getElementById('architectureCanvas');
+      const frameToken = document.getElementById('frameToken');
+      const mqttToken = document.getElementById('mqttToken');
+      const returnToken = document.getElementById('returnToken');
+      const highlights = Array.from(document.querySelectorAll('.node-highlight'));
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const activeAnimations = new Set();
+      let simulationPaused = false;
+      let statusBeforePause = { text: 'Ready for inspection', className: '' };
+      const duration = (milliseconds) => reduceMotion ? Math.min(milliseconds, 30) : milliseconds;
+      const wait = (milliseconds) => new Promise(resolve => {
+        const target = duration(milliseconds);
+        let elapsed = 0;
+        let lastTime = performance.now();
+        const update = (now) => {
+          if (!simulationPaused) elapsed += now - lastTime;
+          lastTime = now;
+          if (elapsed >= target) {
+            resolve();
+          } else {
+            requestAnimationFrame(update);
+          }
+        };
+        requestAnimationFrame(update);
+      });
+
+      const setStatus = (message, state = '') => {
+        systemStatus.textContent = message;
+        systemStatus.className = state;
+      };
+
+      const resumeAnimation = (restoreStatus = true) => {
+        simulationPaused = false;
+        architectureCanvas.classList.remove('paused');
+        activeAnimations.forEach(animation => animation.play());
+        pauseAnimationBtn.setAttribute('aria-pressed', 'false');
+        pauseAnimationBtn.textContent = '⏸ Pause animation';
+        if (restoreStatus) {
+          setStatus(statusBeforePause.text, statusBeforePause.className);
+        }
+      };
+
+      const pauseAnimation = () => {
+        statusBeforePause = {
+          text: systemStatus.textContent,
+          className: systemStatus.className
+        };
+        simulationPaused = true;
+        architectureCanvas.classList.add('paused');
+        activeAnimations.forEach(animation => animation.pause());
+        pauseAnimationBtn.setAttribute('aria-pressed', 'true');
+        pauseAnimationBtn.textContent = '▶ Resume animation';
+        setStatus('Animation paused', 'warning');
+      };
+
+      const setPauseAvailable = (available) => {
+        pauseAnimationBtn.disabled = !available || reduceMotion;
+        if (!available && simulationPaused) resumeAnimation(false);
+      };
+
+      const clearHighlights = () => {
+        highlights.forEach(node => node.classList.remove('active', 'success'));
+      };
+
+      const activateNode = (id, success = false) => {
+        clearHighlights();
+        const node = document.getElementById(id);
+        if (node) {
+          node.classList.add('active');
+          if (success) node.classList.add('success');
+        }
+      };
+
+      const placeToken = (token, x, y) => {
+        token.style.left = `${x}%`;
+        token.style.top = `${y}%`;
+      };
+
+      const hideTokens = () => {
+        [frameToken, mqttToken, returnToken].forEach(token => {
+          if (typeof token.getAnimations === 'function') {
+            token.getAnimations().forEach(animation => animation.cancel());
+          }
+          token.classList.remove('visible', 'final-token');
+        });
+      };
+
+      const moveToken = async (token, points, milliseconds) => {
+        const finalPoint = points[points.length - 1];
+        if (typeof token.getAnimations === 'function') {
+          token.getAnimations().forEach(animation => animation.cancel());
+        }
+        placeToken(token, points[0].x, points[0].y);
+        token.classList.add('visible');
+
+        if (!reduceMotion && typeof token.animate === 'function') {
+          const keyframes = points.map((point, index) => ({
+            left: `${point.x}%`,
+            top: `${point.y}%`,
+            offset: points.length === 1 ? 1 : index / (points.length - 1)
+          }));
+          const animation = token.animate(keyframes, {
+            duration: milliseconds,
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+            fill: 'forwards'
+          });
+          activeAnimations.add(animation);
+          if (simulationPaused) animation.pause();
+          try {
+            await animation.finished;
+          } catch (error) {
+            // A restarted demonstration can safely cancel an in-progress visual animation.
+          } finally {
+            activeAnimations.delete(animation);
+          }
+        } else {
+          await wait(milliseconds);
+        }
+
+        placeToken(token, finalPoint.x, finalPoint.y);
+      };
+
+      const animateCpu = (start, end, milliseconds) => new Promise(resolve => {
+        if (reduceMotion) {
+          cpuGauge.style.setProperty('--cpu', `${end}%`);
+          cpuValue.textContent = `${Math.round(end)}%`;
+          cpuGauge.setAttribute('aria-label', `Edge CPU utilisation ${Math.round(end)} percent`);
+          resolve();
+          return;
+        }
+
+        let elapsed = 0;
+        let lastTime = performance.now();
+        const update = (now) => {
+          if (!simulationPaused) elapsed += now - lastTime;
+          lastTime = now;
+          const progress = Math.min(1, elapsed / milliseconds);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const current = start + ((end - start) * eased);
+          const rounded = Math.round(current);
+          cpuGauge.style.setProperty('--cpu', `${current.toFixed(1)}%`);
+          cpuValue.textContent = `${rounded}%`;
+          cpuGauge.setAttribute('aria-label', `Edge CPU utilisation ${rounded} percent`);
+          if (progress < 1) {
+            requestAnimationFrame(update);
+          } else {
+            resolve();
+          }
+        };
+        requestAnimationFrame(update);
+      });
+
+      const animateSustainedThreshold = () => new Promise(resolve => {
+        if (reduceMotion) {
+          sustainFill.style.width = '100%';
+          sustainLabel.textContent = '60 s sustained — offloading triggered';
+          resolve();
+          return;
+        }
+
+        const visualDuration = 2500;
+        let elapsed = 0;
+        let lastTime = performance.now();
+        const update = (now) => {
+          if (!simulationPaused) elapsed += now - lastTime;
+          lastTime = now;
+          const progress = Math.min(1, elapsed / visualDuration);
+          const simulatedSeconds = Math.round(progress * 60);
+          sustainFill.style.width = `${progress * 100}%`;
+          sustainLabel.textContent = `${simulatedSeconds} s / 60 s sustained`;
+          if (progress < 1) {
+            requestAnimationFrame(update);
+          } else {
+            sustainLabel.textContent = '60 s sustained — offloading triggered';
+            resolve();
+          }
+        };
+        requestAnimationFrame(update);
+      });
+
+      const resetSimulation = () => {
+        if (simulationPaused) resumeAnimation(false);
+        setPauseAvailable(false);
+        clearHighlights();
+        hideTokens();
+        frameToken.innerHTML = 'CAPTURED<br>FRAME';
+        mqttToken.innerHTML = 'BASE64<br>MQTT';
+        returnToken.innerHTML = 'CLOUD<br>RESULT';
+        cpuGauge.style.setProperty('--cpu', '34%');
+        cpuValue.textContent = '34%';
+        cpuGauge.setAttribute('aria-label', 'Edge CPU utilisation 34 percent');
+        sustainFill.style.width = '0%';
+        sustainLabel.textContent = 'Normal edge load';
+        predictionValue.textContent = '—';
+        predictionValue.className = '';
+        mqttRttValue.textContent = '—';
+        mqttRttValue.className = '';
+        finalResultValue.textContent = '—';
+        finalResultValue.className = '';
+        setStatus('Ready for inspection');
+        highCpuBtn.disabled = true;
+      };
+
+      const runInspection = async () => {
+        resetSimulation();
+        runInspectionBtn.disabled = true;
+        setPauseAvailable(true);
+        setStatus('Capturing bottle frame', 'running');
+        activateNode('nodeCamera');
+        await wait(300);
+
+        setStatus('Transferring frame to Raspberry Pi', 'running');
+        activateNode('nodePi');
+        await moveToken(frameToken, [
+          { x: 5.8, y: 39 },
+          { x: 27, y: 39 }
+        ], duration(750));
+
+        setStatus('Preparing frame: resize and normalize', 'running');
+        activateNode('nodeProcessing');
+        await moveToken(frameToken, [
+          { x: 27, y: 39 },
+          { x: 39, y: 39 }
+        ], duration(550));
+
+        setStatus('Checking adaptive offload rule', 'running');
+        activateNode('nodeDecision');
+        await moveToken(frameToken, [
+          { x: 39, y: 39 },
+          { x: 41.5, y: 49 },
+          { x: 41.5, y: 61 }
+        ], duration(650));
+
+        frameToken.classList.remove('visible');
+        await animateCpu(34, 46, duration(450));
+        sustainLabel.textContent = 'CPU 46% · process locally';
+
+        activateNode('nodeLocal');
+        setStatus('Local inference running', 'running');
+        returnToken.innerHTML = 'LOCAL<br>RESULT';
+        await moveToken(returnToken, [
+          { x: 41.5, y: 61 },
+          { x: 41.5, y: 76 },
+          { x: 41.5, y: 90 }
+        ], duration(700));
+        await wait(850);
+
+        activateNode('nodeLocal', true);
+        predictionValue.textContent = 'Label present';
+        predictionValue.className = 'complete';
+        setStatus('Sending local result to Flask dashboard', 'running');
+        activateNode('nodeFlask');
+        await moveToken(returnToken, [
+          { x: 41.5, y: 90 },
+          { x: 55, y: 90 },
+          { x: 67.5, y: 90 }
+        ], duration(750));
+
+        setStatus('Writing inspection result to Results Log', 'running');
+        activateNode('nodeResults');
+        returnToken.classList.add('final-token');
+        returnToken.innerHTML = 'FINAL<br>RESULT';
+        await moveToken(returnToken, [
+          { x: 67.5, y: 90 },
+          { x: 79, y: 90 },
+          { x: 90.5, y: 90 }
+        ], duration(750));
+
+        activateNode('nodeResults', true);
+        finalResultValue.textContent = 'Results Log · local PASS';
+        finalResultValue.className = 'complete';
+        setStatus('Results Log updated', 'complete');
+        setPauseAvailable(false);
+        highCpuBtn.disabled = false;
+        runInspectionBtn.disabled = false;
+      };
+
+      const simulateHighCpu = async () => {
+        runInspectionBtn.disabled = true;
+        highCpuBtn.disabled = true;
+        setPauseAvailable(true);
+        hideTokens();
+        clearHighlights();
+        sustainFill.style.width = '0%';
+        frameToken.innerHTML = 'CAPTURED<br>FRAME';
+        mqttToken.innerHTML = 'BASE64<br>MQTT';
+        predictionValue.textContent = '—';
+        predictionValue.className = '';
+        mqttRttValue.textContent = '—';
+        finalResultValue.textContent = 'Adaptive decision pending';
+        finalResultValue.className = 'warning';
+
+        setStatus('Capturing a new bottle frame', 'running');
+        activateNode('nodeCamera');
+        placeToken(frameToken, 5.8, 39);
+        frameToken.classList.add('visible');
+        await wait(350);
+
+        setStatus('Transferring frame to Raspberry Pi', 'running');
+        await moveToken(frameToken, [
+          { x: 5.8, y: 39 },
+          { x: 16, y: 39 },
+          { x: 27, y: 39 }
+        ], duration(750));
+        activateNode('nodePi');
+        await wait(300);
+
+        setStatus('Preparing frame: resize and normalize', 'running');
+        await moveToken(frameToken, [
+          { x: 27, y: 39 },
+          { x: 39, y: 39 }
+        ], duration(550));
+        activateNode('nodeProcessing');
+        await wait(350);
+
+        setStatus('Sending prepared frame to offload decision', 'running');
+        await moveToken(frameToken, [
+          { x: 39, y: 39 },
+          { x: 41.5, y: 49 },
+          { x: 41.5, y: 61 }
+        ], duration(650));
+        activateNode('nodeDecision');
+        setStatus('Increasing edge CPU load', 'warning');
+        sustainLabel.textContent = 'Approaching offload threshold';
+        await animateCpu(46, 90, duration(1700));
+
+        setStatus('CPU threshold reached', 'warning');
+        sustainLabel.textContent = '0 s / 60 s sustained';
+        await animateSustainedThreshold();
+
+        frameToken.innerHTML = 'JPEG<br>FRAME';
+        setStatus('Encoding JPEG frame as Base64', 'running');
+        await wait(400);
+        frameToken.innerHTML = 'BASE64<br>JSON';
+        await wait(350);
+        frameToken.classList.remove('visible');
+
+        activateNode('nodeMqtt');
+        setStatus('Publishing encoded frame to MQTT broker', 'running');
+        await moveToken(mqttToken, [
+          { x: 41.6, y: 61.5 },
+          { x: 53.8, y: 61.5 },
+          { x: 66.6, y: 61.5 }
+        ], duration(1050));
+
+        activateNode('nodeCloud');
+        setStatus('Delivering offloaded frame to cloud', 'running');
+        await moveToken(mqttToken, [
+          { x: 66.6, y: 61.5 },
+          { x: 84.5, y: 61.5 },
+          { x: 84.5, y: 39 },
+          { x: 88, y: 39 }
+        ], duration(1050));
+        mqttToken.classList.remove('visible');
+        setStatus('Cloud YOLO inference running', 'running');
+        await wait(850);
+
+        setStatus('Returning cloud prediction through MQTT', 'running');
+        activateNode('nodeMqtt');
+        returnToken.innerHTML = 'CLOUD<br>RESULT';
+        await moveToken(returnToken, [
+          { x: 88, y: 39 },
+          { x: 75, y: 39 },
+          { x: 66.6, y: 39 },
+          { x: 66.6, y: 61.5 }
+        ], duration(1050));
+
+        setStatus('Delivering cloud result to Flask dashboard', 'running');
+        activateNode('nodeFlask');
+        await moveToken(returnToken, [
+          { x: 66.6, y: 61.5 },
+          { x: 67.2, y: 75 },
+          { x: 67.5, y: 90 }
+        ], duration(850));
+
+        setStatus('Writing cloud prediction to Results Log', 'running');
+        activateNode('nodeResults');
+        returnToken.classList.add('final-token');
+        returnToken.innerHTML = 'FINAL<br>RESULT';
+        await moveToken(returnToken, [
+          { x: 67.5, y: 90 },
+          { x: 79, y: 90 },
+          { x: 90.5, y: 90 }
+        ], duration(750));
+
+        activateNode('nodeResults', true);
+        mqttRttValue.textContent = '538.39 ms';
+        mqttRttValue.className = 'complete';
+        predictionValue.textContent = 'Label present';
+        predictionValue.className = 'complete';
+        finalResultValue.textContent = 'Results Log · cloud PASS';
+        finalResultValue.className = 'complete';
+        setStatus('Results Log updated after cloud offload', 'complete');
+        setPauseAvailable(false);
+        runInspectionBtn.disabled = false;
+        highCpuBtn.disabled = true;
+      };
+
+      if (runInspectionBtn && highCpuBtn) {
+        runInspectionBtn.addEventListener('click', runInspection);
+        highCpuBtn.addEventListener('click', simulateHighCpu);
+        pauseAnimationBtn.addEventListener('click', () => {
+          if (simulationPaused) {
+            resumeAnimation(true);
+          } else {
+            pauseAnimation();
+          }
+        });
+        if (reduceMotion) {
+          pauseAnimationBtn.title = 'Animation is minimized because reduced motion is enabled.';
+        }
+        resetSimulation();
+
+
+        if (!reduceMotion) {
+          runInspectionBtn.disabled = true;
+          setPauseAvailable(true);
+          architectureCanvas.classList.remove('intro-animation');
+          void architectureCanvas.offsetWidth;
+          architectureCanvas.classList.add('intro-animation');
+
+          const finishArchitectureIntro = (event) => {
+            if (event.target !== architectureCanvas || event.animationName !== 'architecturePan') return;
+            architectureCanvas.removeEventListener('animationend', finishArchitectureIntro);
+            architectureCanvas.classList.remove('intro-animation');
+            setPauseAvailable(false);
+            runInspectionBtn.disabled = false;
+            setStatus('Ready for inspection');
+          };
+          architectureCanvas.addEventListener('animationend', finishArchitectureIntro);
+        } else {
+          runInspectionBtn.disabled = false;
+        }
+      }
+    });
+  </script>
+</body>
+</html>
