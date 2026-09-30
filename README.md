@@ -4,7 +4,7 @@ An IoT-based quality-inspection prototype that uses Edge AI to identify bottles 
 
 ## Live interactive demonstration
 
-[Open the interactive project website](https://subendra.github.io/newsite/)
+[Open the interactive project website](https://subendra.github.io/smart-edge-ai-poster/)
 
 > The website provides an illustrative replay of the system workflow using recorded project measurements. It is not a live inference session.
 
@@ -104,27 +104,6 @@ The interactive website includes:
 - A pause control for animation
 - Reduced-motion support
 - Responsive layouts for different screen sizes
-
-## Run the website locally
-
-Clone the repository:
-
-```bash
-git clone https://github.com/subendra/newsite.git
-cd newsite
-```
-
-Start a local static server:
-
-```bash
-python -m http.server 8000
-```
-
-Open the following address in a browser:
-
-```text
-http://localhost:8000
-```
 
 ## Limitations and future work
 
